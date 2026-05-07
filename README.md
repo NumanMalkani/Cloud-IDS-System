@@ -1,3 +1,4 @@
+<img width="1849" height="860" alt="Screenshot 2026-05-03 150526" src="https://github.com/user-attachments/assets/5646a55b-64d0-41ae-82a8-d030a1d8e2a8" />
 # Cloud IDS Project
 
 Machine-learning based cloud intrusion detection using CICIDS flow features and explainable AI output.
