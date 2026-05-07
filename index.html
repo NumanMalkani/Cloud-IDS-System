@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud IDS XAI</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #101318;
+            --panel: #191f28;
+            --panel-2: #202935;
+            --text: #eef3f8;
+            --muted: #9fb0c3;
+            --line: #334052;
+            --accent: #31c48d;
+            --warn: #f97373;
+            --focus: #5ea1ff;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--text);
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        main {
+            width: min(1180px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 28px 0 40px;
+        }
+
+        header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 22px;
+        }
+
+        h1 {
+            margin: 0 0 6px;
+            font-size: 30px;
+            line-height: 1.15;
+        }
+
+        p {
+            margin: 0;
+            color: var(--muted);
+        }
+
+        .status {
+            padding: 8px 12px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            color: var(--muted);
+            white-space: nowrap;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.65fr);
+            gap: 18px;
+            align-items: start;
+        }
+
+        section {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 18px;
+        }
+
+        h2 {
+            margin: 0 0 14px;
+            font-size: 18px;
+        }
+
+        .inputs {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        label {
+            display: grid;
+            gap: 6px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        input {
+            width: 100%;
+            min-height: 40px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: #111820;
+            color: var(--text);
+            padding: 8px 10px;
+            font-size: 14px;
+        }
+
+        input:focus {
+            border-color: var(--focus);
+            outline: none;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        button {
+            min-height: 42px;
+            border: 0;
+            border-radius: 6px;
+            padding: 0 16px;
+            background: var(--accent);
+            color: #07100c;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        button.secondary {
+            background: var(--panel-2);
+            color: var(--text);
+            border: 1px solid var(--line);
+        }
+
+        .result {
+            display: grid;
+            gap: 12px;
+        }
+
+        .prediction {
+            border-radius: 8px;
+            background: var(--panel-2);
+            border: 1px solid var(--line);
+            padding: 16px;
+        }
+
+        .prediction strong {
+            display: block;
+            font-size: 28px;
+            margin-bottom: 6px;
+        }
+
+        .attack strong {
+            color: var(--warn);
+        }
+
+        .normal strong {
+            color: var(--accent);
+        }
+
+        .meter {
+            height: 12px;
+            overflow: hidden;
+            border-radius: 999px;
+            background: #111820;
+            border: 1px solid var(--line);
+        }
+
+        .meter span {
+            display: block;
+            height: 100%;
+            width: 0;
+            background: var(--warn);
+            transition: width 180ms ease;
+        }
+
+        .chart-panel {
+            margin-top: 14px;
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #111820;
+        }
+
+        .chart-panel h3 {
+            margin: 0 0 10px;
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            height: 210px;
+        }
+
+        .matrix {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .matrix div {
+            padding: 12px;
+            background: var(--panel-2);
+            border-right: 1px solid var(--line);
+            border-bottom: 1px solid var(--line);
+        }
+
+        .matrix div:nth-child(2n) {
+            border-right: 0;
+        }
+
+        .matrix div:nth-last-child(-n + 2) {
+            border-bottom: 0;
+        }
+
+        .matrix b {
+            display: block;
+            font-size: 20px;
+            margin-top: 4px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            overflow-wrap: anywhere;
+        }
+
+        th, td {
+            border-bottom: 1px solid var(--line);
+            padding: 10px 6px;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        th {
+            color: var(--muted);
+            font-weight: 600;
+        }
+
+        td:last-child {
+            color: var(--muted);
+        }
+
+        .error {
+            color: var(--warn);
+        }
+
+        @media (max-width: 860px) {
+            header,
+            .layout,
+            .inputs {
+                grid-template-columns: 1fr;
+            }
+
+            header {
+                display: grid;
+                align-items: start;
+            }
+
+            .status {
+                white-space: normal;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <header>
+            <div>
+                <h1>Cloud Intrusion Detection System</h1>
+                <p>Machine-learning network flow classification with local explanations.</p>
+            </div>
+            <div id="status" class="status">Connecting to backend...</div>
+        </header>
+
+        <div class="layout">
+            <section>
+                <h2>Flow Features</h2>
+                <div id="inputs" class="inputs"></div>
+                <div class="actions">
+                    <button id="predictBtn" type="button">Predict Flow</button>
+                    <button id="defaultsBtn" class="secondary" type="button">Restore Defaults</button>
+                </div>
+            </section>
+
+            <div class="result">
+                <section>
+                    <h2>Prediction</h2>
+                    <div id="prediction" class="prediction">
+                        <strong>Ready</strong>
+                        <p>Enter flow values and run a prediction.</p>
+                    </div>
+                    <div class="meter" aria-label="Attack probability">
+                        <span id="riskBar"></span>
+                    </div>
+                    <div class="chart-panel">
+                        <h3>Probability Graph</h3>
+                        <canvas id="probabilityChart" width="520" height="260"></canvas>
+                    </div>
+                </section>
+
+                <section>
+                    <h2>Model Metrics</h2>
+                    <p id="accuracy">Accuracy: waiting for model</p>
+                    <div id="matrix" class="matrix" style="margin-top: 12px;"></div>
+                    <div class="chart-panel">
+                        <h3>Confusion Matrix Graph</h3>
+                        <canvas id="confusionChart" width="520" height="260"></canvas>
+                    </div>
+                </section>
+
+                <section>
+                    <h2>Explainable AI</h2>
+                    <div class="chart-panel" style="margin: 0 0 12px;">
+                        <h3>Feature Impact Graph</h3>
+                        <canvas id="impactChart" width="520" height="300"></canvas>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Feature</th>
+                                <th>Impact</th>
+                                <th>Direction</th>
+                            </tr>
+                        </thead>
+                        <tbody id="explanation">
+                            <tr><td colspan="3">No prediction yet.</td></tr>
+                        </tbody>
+                    </table>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API = "http://127.0.0.1:5000";
+        let features = [];
+        let defaults = {};
+
+        const statusEl = document.getElementById("status");
+        const inputsEl = document.getElementById("inputs");
+        const predictionEl = document.getElementById("prediction");
+        const riskBar = document.getElementById("riskBar");
+        const explanationEl = document.getElementById("explanation");
+        const matrixEl = document.getElementById("matrix");
+        const accuracyEl = document.getElementById("accuracy");
+        const probabilityCanvas = document.getElementById("probabilityChart");
+        const confusionCanvas = document.getElementById("confusionChart");
+        const impactCanvas = document.getElementById("impactChart");
+
+        function setupCanvas(canvas) {
+            const ratio = window.devicePixelRatio || 1;
+            const width = canvas.clientWidth || canvas.width;
+            const height = canvas.clientHeight || canvas.height;
+            canvas.width = Math.floor(width * ratio);
+            canvas.height = Math.floor(height * ratio);
+            const ctx = canvas.getContext("2d");
+            ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+            return { ctx, width, height };
+        }
+
+        function clearChart(canvas, message) {
+            const { ctx, width, height } = setupCanvas(canvas);
+            ctx.clearRect(0, 0, width, height);
+            ctx.fillStyle = "#9fb0c3";
+            ctx.font = "14px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(message, width / 2, height / 2);
+        }
+
+        function drawProbabilityChart(normal, attack) {
+            const { ctx, width, height } = setupCanvas(probabilityCanvas);
+            const values = [
+                { label: "Normal", value: normal, color: "#31c48d" },
+                { label: "Attack", value: attack, color: "#f97373" },
+            ];
+            const max = 1;
+            const chartLeft = 86;
+            const chartRight = width - 22;
+            const barHeight = 34;
+
+            ctx.clearRect(0, 0, width, height);
+            ctx.font = "13px Arial";
+            values.forEach((item, index) => {
+                const y = 52 + index * 70;
+                const barWidth = (chartRight - chartLeft) * (item.value / max);
+
+                ctx.fillStyle = "#9fb0c3";
+                ctx.textAlign = "right";
+                ctx.fillText(item.label, chartLeft - 12, y + 22);
+
+                ctx.fillStyle = "#202935";
+                ctx.fillRect(chartLeft, y, chartRight - chartLeft, barHeight);
+                ctx.fillStyle = item.color;
+                ctx.fillRect(chartLeft, y, barWidth, barHeight);
+
+                ctx.fillStyle = "#eef3f8";
+                ctx.textAlign = "left";
+                ctx.fillText(`${Math.round(item.value * 100)}%`, chartLeft + barWidth + 8, y + 22);
+            });
+        }
+
+        function drawConfusionChart(matrix) {
+            const { ctx, width, height } = setupCanvas(confusionCanvas);
+            const values = [matrix[0][0], matrix[0][1], matrix[1][0], matrix[1][1]];
+            const max = Math.max(...values, 1);
+            const labels = ["TN", "FP", "FN", "TP"];
+            const names = ["Normal ok", "False alarm", "Missed attack", "Attack found"];
+            const cellGap = 10;
+            const cellSize = Math.min((width - 70) / 2, (height - 70) / 2);
+            const startX = (width - (cellSize * 2 + cellGap)) / 2;
+            const startY = 36;
+
+            ctx.clearRect(0, 0, width, height);
+            values.forEach((value, index) => {
+                const row = Math.floor(index / 2);
+                const col = index % 2;
+                const x = startX + col * (cellSize + cellGap);
+                const y = startY + row * (cellSize + cellGap);
+                const intensity = value / max;
+                const red = index === 1 || index === 2 ? 249 : 49;
+                const green = index === 1 || index === 2 ? 115 : 196;
+                const blue = index === 1 || index === 2 ? 115 : 141;
+
+                ctx.fillStyle = `rgba(${red}, ${green}, ${blue}, ${0.22 + intensity * 0.68})`;
+                ctx.fillRect(x, y, cellSize, cellSize);
+                ctx.strokeStyle = "#334052";
+                ctx.strokeRect(x, y, cellSize, cellSize);
+
+                ctx.fillStyle = "#eef3f8";
+                ctx.font = "700 20px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText(String(value), x + cellSize / 2, y + cellSize / 2 - 4);
+
+                ctx.fillStyle = "#9fb0c3";
+                ctx.font = "12px Arial";
+                ctx.fillText(`${labels[index]} - ${names[index]}`, x + cellSize / 2, y + cellSize / 2 + 18);
+            });
+        }
+
+        function drawImpactChart(explanation) {
+            const { ctx, width, height } = setupCanvas(impactCanvas);
+            const rows = explanation.slice(0, 6);
+            const max = Math.max(...rows.map((row) => Math.abs(row.impact)), 0.001);
+            const center = width * 0.46;
+            const rowHeight = 34;
+
+            ctx.clearRect(0, 0, width, height);
+            ctx.strokeStyle = "#334052";
+            ctx.beginPath();
+            ctx.moveTo(center, 18);
+            ctx.lineTo(center, height - 18);
+            ctx.stroke();
+
+            rows.forEach((row, index) => {
+                const y = 34 + index * rowHeight;
+                const impactWidth = Math.min(width * 0.42, Math.abs(row.impact) / max * width * 0.38);
+                const positive = row.impact >= 0;
+                const x = positive ? center : center - impactWidth;
+
+                ctx.fillStyle = "#9fb0c3";
+                ctx.font = "12px Arial";
+                ctx.textAlign = "right";
+                ctx.fillText(row.feature, center - 10, y + 9);
+
+                ctx.fillStyle = positive ? "#f97373" : "#31c48d";
+                ctx.fillRect(x, y - 8, impactWidth, 18);
+
+                ctx.fillStyle = "#eef3f8";
+                ctx.textAlign = positive ? "left" : "right";
+                ctx.fillText(row.impact.toFixed(4), positive ? x + impactWidth + 8 : x - 8, y + 7);
+            });
+        }
+
+        function formatNumber(value) {
+            const number = Number(value);
+            if (!Number.isFinite(number)) return "0";
+            return Number.isInteger(number) ? String(number) : number.toFixed(4);
+        }
+
+        function renderInputs() {
+            inputsEl.innerHTML = "";
+            features.forEach((feature) => {
+                const label = document.createElement("label");
+                label.textContent = feature;
+
+                const input = document.createElement("input");
+                input.type = "number";
+                input.step = "any";
+                input.id = feature;
+                input.value = formatNumber(defaults[feature]);
+
+                label.appendChild(input);
+                inputsEl.appendChild(label);
+            });
+        }
+
+        function restoreDefaults() {
+            features.forEach((feature) => {
+                document.getElementById(feature).value = formatNumber(defaults[feature]);
+            });
+        }
+
+        function payloadFromInputs() {
+            return Object.fromEntries(
+                features.map((feature) => [feature, Number(document.getElementById(feature).value || 0)])
+            );
+        }
+
+        async function loadFeatures() {
+            const response = await fetch(`${API}/features`);
+            if (!response.ok) throw new Error("Backend did not return feature metadata.");
+            const data = await response.json();
+            features = data.features;
+            defaults = data.defaults;
+            statusEl.textContent = `Backend online. Model accuracy ${(data.accuracy * 100).toFixed(2)}%`;
+            renderInputs();
+        }
+
+        async function loadMatrix() {
+            const response = await fetch(`${API}/confusion`);
+            if (!response.ok) throw new Error("Could not load model metrics.");
+            const data = await response.json();
+            const m = data.matrix;
+
+            accuracyEl.textContent = `Accuracy: ${(data.accuracy * 100).toFixed(2)}%`;
+            matrixEl.innerHTML = `
+                <div>Actual Normal, Pred Normal<b>${m[0][0]}</b></div>
+                <div>Actual Normal, Pred Attack<b>${m[0][1]}</b></div>
+                <div>Actual Attack, Pred Normal<b>${m[1][0]}</b></div>
+                <div>Actual Attack, Pred Attack<b>${m[1][1]}</b></div>
+            `;
+            drawConfusionChart(m);
+        }
+
+        async function predict() {
+            predictionEl.className = "prediction";
+            predictionEl.innerHTML = "<strong>Checking...</strong><p>Running model inference.</p>";
+
+            const response = await fetch(`${API}/predict`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payloadFromInputs()),
+            });
+
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || "Prediction failed.");
+
+            const isAttack = data.prediction === "Attack";
+            const risk = Math.round(data.attack_probability * 100);
+            predictionEl.className = `prediction ${isAttack ? "attack" : "normal"}`;
+            predictionEl.innerHTML = `
+                <strong>${data.prediction}</strong>
+                <p>Attack probability: ${risk}%</p>
+            `;
+            riskBar.style.width = `${risk}%`;
+            drawProbabilityChart(data.normal_probability, data.attack_probability);
+
+            explanationEl.innerHTML = data.explanation.map((row) => `
+                <tr>
+                    <td>${row.feature}</td>
+                    <td>${row.impact.toFixed(5)}</td>
+                    <td>${row.direction}</td>
+                </tr>
+            `).join("");
+            drawImpactChart(data.explanation);
+        }
+
+        document.getElementById("predictBtn").addEventListener("click", () => {
+            predict().catch((error) => {
+                predictionEl.className = "prediction";
+                predictionEl.innerHTML = `<strong class="error">Error</strong><p>${error.message}</p>`;
+            });
+        });
+
+        document.getElementById("defaultsBtn").addEventListener("click", restoreDefaults);
+
+        window.addEventListener("resize", () => {
+            clearChart(probabilityCanvas, "Run a prediction to draw probabilities.");
+            clearChart(impactCanvas, "Run a prediction to draw feature impacts.");
+        });
+
+        clearChart(probabilityCanvas, "Run a prediction to draw probabilities.");
+        clearChart(confusionCanvas, "Loading confusion matrix...");
+        clearChart(impactCanvas, "Run a prediction to draw feature impacts.");
+
+        Promise.all([loadFeatures(), loadMatrix()]).catch((error) => {
+            statusEl.textContent = "Backend offline";
+            predictionEl.innerHTML = `<strong class="error">Cannot connect</strong><p>${error.message}</p>`;
+        });
+    </script>
+</body>
+</html>
