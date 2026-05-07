@@ -5,6 +5,7 @@ Machine-learning based cloud intrusion detection using CICIDS flow features and 
 ## Setup
 
 ```powershell
+cd backend
 pip install -r requirements.txt
 python train_model.py
 python run_server.py
@@ -13,7 +14,7 @@ python run_server.py
 Then open:
 
 ```text
-C:\Users\sahuk\OneDrive\Documents\6th SEM\PROJECTS\Cloud_IDS_Project\frontend\index.html
+cd frontend
 ```
 
 ## API
